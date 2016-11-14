@@ -1,0 +1,8 @@
+name: Publish Document
+title:
+account: rpubs
+server: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/225696/010451a4189244c094c8de973eace824
+bundleId: https://api.rpubs.com/api/v1/document/225696/010451a4189244c094c8de973eace824
+url: http://rpubs.com/srhumir/225696
+when: 1479050013.39953

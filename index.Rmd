@@ -1,0 +1,287 @@
+---
+title       : ARIMA?!
+subtitle    : When a forecasting project is not one
+author      : Reza Hosseini
+job         : 
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : []            # {mathjax, quiz, bootstrap}
+mode        : draft # {selfcontained, standalone, draft}
+knit        : slidify::knit2slides
+---
+## Outline
+```{r, echo=F, message=F}
+library(forecast)
+library(timeDate)
+library(caret)
+library(reshape2)
+library(slidify)
+
+# fill missing dates by previus day
+fill_misiing <- function(df){
+  missing_day <- numeric()
+  for (i in 1:(nrow(df)-1)){
+    if ((df$date[i+1] - df$date[i]) > 1){
+      missing_day <- c(missing_day,i)
+    }
+  }
+  missing_dates <- df$date[missing_day]
+  for (i in missing_dates){
+    new_date <- i+1
+    temp_row <- df[df$date == i,-1]
+    temp_row <- data.frame("date" = as.Date(new_date), temp_row)
+    pool1 <- df[df$date <= i,]
+    pool2 <- df[df$date > i,]
+    df <- rbind(pool1, temp_row, pool2)
+  }
+  df
+}
+```
+
+```{r, echo=F, message=F}
+pool <- read.csv("/media/reza/Data/Reza/Muenster/data/train-processed-wo-lag.csv", stringsAsFactors = F)
+# pool <- read.csv("D:/Reza/Muenster/data/train-processed-wo-lag.csv", stringsAsFactors = F)
+
+pool$date <- as.Date(pool$date)
+pool <- fill_misiing(pool)
+
+visitors <- ts(pool$visitors_pool_total, frequency = 365, start = c(2005,as.POSIXlt(pool$date[1])$yday))
+visitors_3years <- window(visitors, start=2010)
+```
+ * The problem
+ 
+ * Is it a forecast problem?
+ 
+ * Weakly seasonality
+ 
+ * Multiseasonal time series
+ 
+ * Machine learning approach
+
+
+---
+
+## The problem
+
+### Forecasting the number of visitors to Nettebad Osnabrück. Using
+* Visitors to the pool from `r pool$date[1]`
+* Some variables about the pool such as events, classes, availability of certain facilities etc.
+* Weather data
+
+https://inclass.kaggle.com/c/swimming-pool-visitor-forecasting
+```{r, echo=FALSE, fig.height=4, fig.width=13, fig.align='center'}
+plot(visitors_3years, col="blue", ylab  = "Number of visitors", xlab="Year", main="Visitors to the Nettebad Osnabrück (2010-2013)")
+```
+
+---
+<!-- Timo, Thomas,  -->
+
+
+## Is it a forecast problem?
+* It seems so, but looking at the lag plots ...
+
+```{r, echo=FALSE, fig.height=7, fig.width=10, fig.align='center'}
+lag.plot(visitors, set.lags = c(1), col=rgb(0,0,1,.5), main = "Lag 1 plot")
+```
+
+---
+
+## Is it a forecast problem?
+* It seems so, but looking at the lag plots ...
+
+```{r, echo=FALSE, fig.height=7, fig.width=10, fig.align='center'}
+lag.plot(visitors, set.lags = c(7), col=rgb(0,0,1,.5), main = "Lag 7 plot")
+```
+
+---
+
+## Is it a forecast problem?
+* It seems so, but looking at the lag plots ...
+
+```{r, echo=FALSE, fig.height=7, fig.width=10, fig.align='center'}
+lag.plot(visitors, set.lags = c(30), col=rgb(0,0,1,.5), main = "Lag  30 plot")
+```
+
+---
+## Is it a forecast problem?
+* It seems so, but looking at the lag plots ...
+
+```{r, echo=FALSE, fig.height=7, fig.width=10, fig.align='center'}
+lag.plot(visitors, set.lags = c(365), col=rgb(0,0,1,.5), main = "Lag 365 plot")
+```
+
+---
+
+## Is it a forecast problem
+* And the autocorrelation plot
+
+```{r, echo=FALSE, fig.height=7, fig.width=10, fig.align='center'}
+acf(visitors,main = "Autocorrelation function of last three years visitors", lag.max = 35, xaxt="n", ylab = "Autocorrelation")
+axis(1,at=(0:35)/350,labels = 0:35, cex=0.8)
+```
+
+---
+## Weekly seasonality
+- Autocorrelation plot suggested weekly seasonality in the data 
+- The missing days is imputed and the time series is decomposed
+```{r, echo=FALSE, fig.height=7, fig.width=10, fig.align='center'}
+visitors <- ts(pool$visitors_pool_total, frequency = 7, start = c(1, as.POSIXlt(pool$date[1])$wday))
+start_3y <-  length(visitors)/7 - 3*52
+visitors_3years <- window(visitors, start=start_3y)
+stl <- stl(visitors, s.window = "per")
+stl2 <- stl(visitors_3years, s.window = "per")
+autoplot(stl2) + geom_line(color="blue") + ggtitle("Seasonal decompostion of visitors")
+```
+
+---
+
+## Accuracy of the seasonality
+```{r, echo=FALSE, fig.height=7, fig.width=10, fig.align='center', message=F, warning=F}
+rem <- stl$time.series[,2] + stl$time.series[,3]
+we <- weekdays(tail(pool$date, length(visitors)), abbreviate = T)
+we <- factor(we, levels = c("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"))
+# we <- factor(we, levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+d <- data.frame("weekday" = we, "Total.Visitors" = visitors, "Seasonality.Removed" = rem)
+melted <- melt(d, id.vars = "weekday")
+qplot(x=weekday, y=value, data=melted, facets = .~variable, color=weekday) + geom_boxplot() + guides(color=F) +
+  ggtitle("Visitors based on the week day")
+#plot(we,visitors_3years)
+#plot(we, rem)
+```
+
+---
+
+## Forecasting via decomposition
+```{r, echo=FALSE, fig.height=2, fig.width=10, fig.align='center'}
+autoplot(window(stl$time.series[,1], end=5)) + ggtitle("Weekly seasonality") + ylab("Number of Visitors")
+```
+
+```{r, echo=FALSE, fig.height=4.5, fig.width=10, fig.align='center'}
+av <- mean(stl$time.series[,2] + stl$time.series[,3])
+autoplot(forecast(stl, h=120),  include = 150, plot.conf = F) + ggtitle("Forecast using STL") + ylab("Number of visitors") +
+  geom_abline(slope = 0, intercept = av, color="magenta")
+```
+
+---
+
+
+## Last three years
+```{r, echo=FALSE, fig.height=5, fig.width=10, fig.align='center', message=F, warning=F}
+stl <- stl(visitors_3years, s.window = "per")
+rem <- stl$time.series[,2] + stl$time.series[,3]
+we <- weekdays(tail(pool$date, length(visitors_3years)), abbreviate = T)
+we <- factor(we, levels = c("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"))
+# we <- factor(we, levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+d <- data.frame("weekday" = we, "Visitors.Total" = visitors_3years, "Seasonality.Removed" = rem)
+melted <- melt(d)
+q1 <- qplot(x=weekday, y=value, data=melted, facets = .~variable, color=weekday) + geom_boxplot() + guides(color=F) + 
+  ggtitle("Visitors based on the week day last three years")
+q1
+```
+
+---
+
+## Last three years
+```{r, echo=FALSE, fig.height=5, fig.width=10, fig.align='center', message=F, warning=F}
+q1
+```
+
+- One could remove seasonality and do the prediction on the remainder, then add seasonality
+
+- The best RMSE I could get with this approach was 330.15
+
+---
+## Multiseasonality approach
+* As there are two kinds of sesonality, one can use multiseasonal time series and TBATS
+```{r, echo=FALSE, fig.height=5, fig.width=10, fig.align='center', message=F, warning=F, cache=T}
+visitors2 <- msts(as.numeric(visitors_3years), seasonal.periods = c(7,365.25), start= 2010) 
+tbat <- tbats(visitors2,  num.cores=4)
+```
+```{r, echo=FALSE, fig.height=7, fig.width=10, fig.align='center', message=F, warning=F}
+comp = tbats.components(tbat)
+plot(comp, main= "Multiseasonal decomposition of the last three years", col ="blue")
+fore <- forecast(tbat, h = 365)
+# plot(fore, plot.conf=F)
+```
+
+---
+## Forecast by TBATS
+* Reached RMSE of 376
+```{r, echo=FALSE, fig.height=7, fig.width=10, fig.align='center', message=F, warning=F}
+autoplot(forecast(tbat, h=365), include = 365, plot.conf =T) + ggtitle("Forecast the next year using TBATS with confidence intervals")
+```
+
+---
+
+## Machine learning approach
+
+- School and bank holidays
+- Weekday and month name to  consider seasonality
+- Weather data (temprature, wind, preception,...)
+- New features
+    * Monthly average temprature
+    * Warmer than monthly average
+    * Warmer than the previous day
+    * Heat index
+- Adjust prices by consumer price index (CPI)
+
+---
+
+## Machine learning approach
+
+- Train a random forest to get feature importance
+- Use the most important feature (99% cumulative importance)
+- Use gradient boosting (XGboost) for the final prediction
+- Adjust christmas and new years manually to the previous year value
+
+* The final rmse is 247.33 (269.89 without manuall adjusment)
+
+---
+
+## Machine learning approach
+```{r, echo=FALSE, fig.height=6.5, fig.width=12, fig.align='center', message=F, warning=F}
+# t <- read.csv("/media/reza/Data/Reza/Muenster/data/test/final-07.11.csv", stringsAsFactors = F)
+t <- read.csv("D:/Reza/Muenster/data/test/final-07.11.csv", stringsAsFactors = F)
+
+t$date <- as.Date(t$date, "%m/%d/%Y" )
+
+fore2 <- c(fore$mean[1:358], fore$mean[359:364])
+t <- cbind(t,as.integer(fore2))
+names(t) <- c("Date", "Machine.learning", "TBATS")
+p <- ggplot(t, aes(Date, Machine.learning)) + 
+  geom_line(color=rgb(1,0,0,.7)) +  
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) + 
+  scale_x_date("Date", date_breaks = "10 days") + 
+  ggtitle("Forecast by Machine learning approach") + ylab("Number of Visitors")
+print(p)
+```
+
+---
+
+## Machine learning approach
+```{r, echo=FALSE, fig.height=6.5, fig.width=12, fig.align='center', message=F, warning=F}
+p + geom_line(aes(y = TBATS, plot.conf =T), color=rgb(0,0,1,.5)) + 
+    ggtitle("Forecast by Machine learning approach vs. TBATS approach")
+```
+
+---
+
+
+
+## Thank you for your patience
+```{r in , eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+slidify("index.Rmd")
+```
+---
+
+## With confidence interval
+```{r, echo=FALSE, fig.height=7, fig.width=12, fig.align='center', message=F, warning=F}
+plot(forecast(tbat, h=365), include = 0, plot.conf =T, color=rgb(0,0,1,.5), main = "Forecast by Machine learning approach vs. TBATS approach", xaxt="n", ylab="Number of Visitors")
+step <- 1/365
+Date <- c(t$Date[1:(364-7)], as.Date("2013-12-25"), tail(t$Date,7))
+axis(1,at=seq(2013+2*step,2014+step, by = 10*step),labels = Date[seq(1,365,by=10)], hadj = 1, las=3, cex.axis=0.7)
+ml <- c(t$Machine.learning[1:(364-7)], 0, tail(t$Machine.learning,7))
+lines(seq(2013+2*step,2014+step, by = step), ml, col = rgb(1,0,0,.7))
+```
+---
