@@ -154,13 +154,13 @@ qplot(x=weekday, y=value, data=melted, facets = .~variable, color=weekday) + geo
 
 ## Forecasting via decomposition
 ```{r, echo=FALSE, fig.height=2, fig.width=10, fig.align='center'}
-autoplot(window(stl$time.series[,1], end=5)) + ggtitle("Weekly seasonality") + ylab("Number of Visitors")
+autoplot(window(stl$time.series[,1], end=5)) + ggtitle("Weekly seasonality") + ylab("Number of Visitors") 
 ```
 
 ```{r, echo=FALSE, fig.height=4.5, fig.width=10, fig.align='center'}
 av <- mean(stl$time.series[,2] + stl$time.series[,3])
 autoplot(forecast(stl, h=120),  include = 150, plot.conf = F) + ggtitle("Forecast using STL") + ylab("Number of visitors") +
-  geom_abline(slope = 0, intercept = av, color="magenta")
+  geom_abline(slope = 0, intercept = av, color="magenta") + + xlab("Number of weeks from the begining")
 ```
 
 ---
