@@ -89,10 +89,7 @@ https://inclass.kaggle.com/c/swimming-pool-visitor-forecasting
 ## Forecasting via decomposition
 <img src="figure/unnamed-chunk-11-1.png" title="plot of chunk unnamed-chunk-11" alt="plot of chunk unnamed-chunk-11" style="display: block; margin: auto;" />
 
-
-```
-## Error in +xlab("Number of weeks from the begining"): invalid argument to unary operator
-```
+<img src="figure/unnamed-chunk-12-1.png" title="plot of chunk unnamed-chunk-12" alt="plot of chunk unnamed-chunk-12" style="display: block; margin: auto;" />
 
 ---
 
