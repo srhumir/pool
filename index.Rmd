@@ -241,8 +241,8 @@ autoplot(forecast(tbat, h=365), include = 365, plot.conf =T) + ggtitle("Forecast
 
 ## Machine learning approach
 ```{r, echo=FALSE, fig.height=6.5, fig.width=12, fig.align='center', message=F, warning=F}
-# t <- read.csv("/media/reza/Data/Reza/Muenster/data/test/final-07.11.csv", stringsAsFactors = F)
-t <- read.csv("D:/Reza/Muenster/data/test/final-07.11.csv", stringsAsFactors = F)
+t <- read.csv("/media/reza/Data/Reza/Muenster/data/test/final-07.11.csv", stringsAsFactors = F)
+# t <- read.csv("D:/Reza/Muenster/data/test/final-07.11.csv", stringsAsFactors = F)
 
 t$date <- as.Date(t$date, "%m/%d/%Y" )
 

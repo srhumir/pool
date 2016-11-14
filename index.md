@@ -159,22 +159,7 @@ https://inclass.kaggle.com/c/swimming-pool-visitor-forecasting
 ---
 
 ## Machine learning approach
-
-```
-## Error in file(file, "rt"): cannot open the connection
-```
-
-```
-## Error in t$date: object of type 'closure' is not subsettable
-```
-
-```
-## Error: ggplot2 doesn't know how to deal with data of class matrix
-```
-
-```
-## Error in print(p): object 'p' not found
-```
+<img src="assets/fig/unnamed-chunk-18-1.png" title="plot of chunk unnamed-chunk-18" alt="plot of chunk unnamed-chunk-18" style="display: block; margin: auto;" />
 
 ---
 
