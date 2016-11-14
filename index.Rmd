@@ -131,7 +131,7 @@ start_3y <-  length(visitors)/7 - 3*52
 visitors_3years <- window(visitors, start=start_3y)
 stl <- stl(visitors, s.window = "per")
 stl2 <- stl(visitors_3years, s.window = "per")
-autoplot(stl2) + geom_line(color="blue") + ggtitle("Seasonal decompostion of visitors")
+autoplot(stl2) + geom_line(color="blue") + ggtitle("Seasonal decompostion of visitors") + xlab("Number of weeks from the begining")
 ```
 
 ---
