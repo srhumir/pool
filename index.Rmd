@@ -53,7 +53,7 @@ visitors_3years <- window(visitors, start=2010)
  
  * Is it a forecast problem?
  
- * Weakly seasonality
+ * Weekly seasonality
  
  * Multiseasonal time series
  

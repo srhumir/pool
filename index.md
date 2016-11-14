@@ -18,7 +18,7 @@ knit        : slidify::knit2slides
  
  * Is it a forecast problem?
  
- * Weakly seasonality
+ * Weekly seasonality
  
  * Multiseasonal time series
  
